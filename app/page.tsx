@@ -1,65 +1,109 @@
+'use client'
 import Image from "next/image";
+import { images } from './utils/images'
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
+
+
+
+type Image = {
+  src: string;
+  scale: number;
+  y: number
+  x: number
+};
+
 
 export default function Home() {
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const [imagesState, setImagesState] = useState<Image[]>(images);
+  const animatingRef = useRef(false);
+  const onMouseDown = useRef(false);
+
+
+
+  const move = (numberOfmovement: number) => {
+    if (animatingRef.current) return
+    animatingRef.current = true
+    let finished = 0;
+
+
+    const wrapper = wrapperRef.current
+    if (!wrapper) return
+    const array = Array.from(wrapper.children)
+
+    array.forEach((ele, index) => {
+      const element = ele as HTMLElement;
+      const target = array[
+        (index + numberOfmovement + array.length) % array.length
+      ] as HTMLElement;
+
+
+
+      const style = getComputedStyle(target);
+
+      const { transform, zIndex, opacity } = style;
+
+      const matrix = new DOMMatrix(transform);
+
+      gsap.to(element, {
+        scale: matrix.a,
+        scaleY: matrix.d, // استخدم d وليس b للـ scaleY
+        x: matrix.m41,
+        y: matrix.m42,
+        zIndex,
+        opacity,
+        duration: 0.5,
+        ease: "back",
+        onComplete: () => {
+          finished++;
+          if (finished === array.length) {
+            animatingRef.current = false;
+          }
+        },
+      });
+    });
+  };
+
+
+
+
+
+
+
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+    <div className="w-full h-screen bg-amber-50  relative  flex justify-center items-center overflow-hidden">
+      <button disabled={animatingRef.current} onClick={() => move(1)} className="absolute bottom-40 right-5 z-10 bg-yellow-50 px-2 font-bold text-gray-700 rounded-md ">next</button>
+      <button disabled={animatingRef.current} onClick={() => move(-1)} className="absolute bottom-40 left-5 z-10 bg-yellow-50 px-2 font-bold text-gray-700 rounded-md ">prev</button>
+      <button disabled={animatingRef.current} onClick={() => move(1)} className="absolute bottom-40 right-20 z-10 bg-yellow-50 px-2 font-bold text-gray-700 rounded-md ">two</button>
+
+      <div ref={wrapperRef}
+        style={{
+          perspective: "1000px",
+          transform: `translateX(${-210}px) `
+        }}
+        className="w-[99%]  bottom-5  bg-black   pt-10  h-150    absolute justify-between transition-all duration-500 ease-in-out">
+
+        {imagesState.map((img, index) => {
+          return <div
+
+            style={{
+              transform:
+                `
+               translateX(${img.x}px)
+               translateY(${img.y}px)
+                 scale(${img.scale})  
+                  `, zIndex: imagesState.length - index, opacity: index === 0 || index === imagesState.length - 1 ? 0 : 1
+            }}
+
+            className="absolute w-110 bottom-0 h-120   "
+            key={img.src}>
+            <Image alt="" src={img.src} fill className="object-cover" />
+          </div>
+        })}
+      </div>
     </div>
   );
 }
